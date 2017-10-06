@@ -128,9 +128,9 @@ sleep_time = 0#0.028
 
 
 def get_state(state, r, done):
-    send_msg = 'state = '+json.dumps(state).replace('[','{').replace(']','}')
-    send_msg += ';reward = '+json.dumps(r).replace('[','{').replace(']','}')
-    send_msg += ';terminal = '+json.dumps(done).replace('[','{').replace(']','}')
+    send_msg = b'state = '+bytes(json.dumps(state).replace('[','{').replace(']','}'), 'utf-8')
+    send_msg += b';reward = '+bytes(json.dumps(r).replace('[','{').replace(']','}'), 'utf-8')
+    send_msg += b';terminal = '+bytes(json.dumps(done).replace('[','{').replace(']','}'), 'utf-8')
     return send_msg
 
 
@@ -146,16 +146,16 @@ game.new_episode()
 r = -0.01 #base
 s=None
 while True:
-    msg=socket.recv()
+    msg=socket.recv().decode("utf-8") ###
 
     if msg == "state":
-        s = game.get_state(); img = s.image_buffer; 
+        s = game.get_state(); img = s.screen_buffer; 
         img = scipy.misc.imresize(img,(84,84,3)); scipy.misc.imsave('../games/current' +str(port)+ '.png', img)
 
         socket.send(get_state('../games/current' +str(port)+ '.png', r, game.is_episode_finished()))
 
     elif msg == "step": 
-        socket.send("action")
+        socket.send(b"action")
         a_indx = socket.recv()
         a_indx = int(a_indx)-1
         if a_indx == 1 or a_indx == 2:
@@ -172,20 +172,20 @@ while True:
         if r >= 0:
             terminal = True 
         if terminal == False:
-            s = game.get_state(); img = s.image_buffer; 
+            s = game.get_state(); img = s.screen_buffer; 
 
-        img = s.image_buffer; img = scipy.misc.imresize(img,(84,84,3))
+        img = s.screen_buffer; img = scipy.misc.imresize(img,(84,84,3))
         scipy.misc.imsave('../games/current' +str(port)+ '.png', img)
         socket.send(get_state('../games/current'+str(port)+'.png', r, terminal))
         if terminal:
             game.new_episode()    
 
     elif msg == "actions":
-        socket.send('actions = '+json.dumps(range(1,len(actions)+1)).replace('[','{').replace(']','}'))
+        socket.send(b'actions = '+bytes(json.dumps(list(range(1,len(actions)+1))).replace('[','{').replace(']','}'), 'utf-8'))
 
     elif msg == "reset":
         game.new_episode()
-        socket.send("ack")
+        socket.send(b"ack")
 
     if game.is_episode_finished():
         game.new_episode()
